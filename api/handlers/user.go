@@ -74,8 +74,7 @@ func (u *User) Register(ctx *fiber.Ctx) error {
 
 	// Validate request body
 	if err := validateUser(req); err != nil {
-		status, response := responses.ErrorBadRequests(err.Error())
-		return ctx.Status(status).JSON(response)
+		return responses.ErrorBadRequest(ctx, err.Error())
 	}
 
 	// Create user object
@@ -89,19 +88,16 @@ func (u *User) Register(ctx *fiber.Ctx) error {
 	result, err := u.Database.Register(ctx.UserContext(), usr)
 	if err != nil {
 		if err.Error() == "EXISTING_USERNAME" {
-			status, response := responses.ErrorConflict(err.Error())
-			return ctx.Status(status).JSON(response)
+			return responses.ErrorConflict(ctx, err.Error())
 		}
 
-		status, response := responses.ErrorServers(err.Error())
-		return ctx.Status(status).JSON(response)
+		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
 
 	// generate access token
 	accessToken, err := utils.GenerateAccessToken(result.Username, result.Id)
 	if err != nil {
-		status, response := responses.ErrorServers(err.Error())
-		return ctx.Status(status).JSON(response)
+		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
 
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -125,32 +121,27 @@ func (u *User) Login(ctx *fiber.Ctx) error {
 	}
 
 	if err := validateLogin(req); err != nil {
-		status, response := responses.ErrorBadRequests(err.Error())
-		return ctx.Status(status).JSON(response)
+		return responses.ErrorBadRequest(ctx, err.Error())
 	}
 
 	// login user
 	result, err := u.Database.Login(ctx.UserContext(), req.Username, req.Password)
 	if err != nil {
 		if err.Error() == "USER_NOT_FOUND" {
-			status, response := responses.ErrorNotFound(err.Error())
-			return ctx.Status(status).JSON(response)
+			return responses.ErrorNotFound(ctx, err.Error())
 		}
 
 		if err.Error() == "INVALID_PASSWORD" {
-			status, response := responses.ErrorBadRequests(err.Error())
-			return ctx.Status(status).JSON(response)
+			return responses.ErrorBadRequest(ctx, err.Error())
 		}
 
-		status, response := responses.ErrorServers(err.Error())
-		return ctx.Status(status).JSON(response)
+		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
 
 	// generate access token
 	accessToken, err := utils.GenerateAccessToken(result.Username, result.Id)
 	if err != nil {
-		status, response := responses.ErrorServers(err.Error())
-		return ctx.Status(status).JSON(response)
+		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
