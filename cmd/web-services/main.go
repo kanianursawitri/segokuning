@@ -17,7 +17,13 @@ import (
 )
 
 func Run() {
-	app := fiber.New()
+	app := fiber.New(
+		fiber.Config{
+			StrictRouting:     true,
+			EnablePrintRoutes: true,
+			CaseSensitive:     true,
+		},
+	)
 
 	config, err := configs.LoadConfig()
 	if err != nil {
