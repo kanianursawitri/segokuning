@@ -3,8 +3,9 @@ package functions
 import "errors"
 
 var (
-	ErrNoRow                = errors.New("data not found")
-	ErrInsuficientQty       = errors.New("insuficient quantity")
-	ErrUnauthorized         = errors.New("unauthorized")
-	ErrProductNameDuplicate = errors.New("product name already exists")
+	ErrNoRow          = errors.New("NOT_FOUND")
+	ErrInsuficientQty = errors.New("INSUFICCIENT_QUANTITY")
+	ErrUnauthorized   = errors.New("UNAUTHORIZED")
+	ErrDuplicate      = errors.New("DATA_DUPLICATE")
+	ErrDataExists     = errors.New("DATA_EXISTS")
 )
