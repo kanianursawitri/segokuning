@@ -3,11 +3,13 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"regexp"
 	"shopifyx/api/responses"
 	"shopifyx/db/entity"
 	"shopifyx/db/functions"
 	"shopifyx/internal/utils"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -15,76 +17,103 @@ type User struct {
 	Database *functions.User
 }
 
-func validateUser(req struct {
-	Username string `json:"username"`
-	Name     string `json:"name"`
-	Password string `json:"password"`
-}) error {
-	lenUsername := len(req.Username)
-	lenPassword := len(req.Password)
-	lenName := len(req.Name)
+type CredentialType string
 
-	if lenUsername == 0 || lenPassword == 0 || lenName == 0 {
-		return errors.New("username and password are required")
-	}
+const (
+	Phone CredentialType = "phone"
+	Email CredentialType = "email"
+)
 
-	if lenUsername < 5 || lenPassword < 5 || lenName < 5 {
-		return errors.New("username and password length must be at least 5 characters")
-	}
-
-	if lenUsername > 15 || lenPassword > 15 || lenName > 15 {
-		return errors.New("username and password length cannot exceed 15 characters")
-	}
-
-	return nil
+// Struct to define validation rules for both registration and login
+type AuthRequest struct {
+	CredentialType  CredentialType `json:"credentialType"`
+	CredentialValue string         `json:"credentialValue"`
+	Password        string         `json:"password"`
 }
 
-func validateLogin(req struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}) error {
-	lenUsername := len(req.Username)
-	lenPassword := len(req.Password)
+type RegisterRequest struct {
+	CredentialType  CredentialType `json:"credentialType"`
+	CredentialValue string         `json:"credentialValue"`
+	Name            string         `json:"name"`
+	Password        string         `json:"password"`
+}
 
-	if lenUsername == 0 || lenPassword == 0 {
-		return errors.New("username and password are required")
+func (a AuthRequest) Validate() error {
+	return validation.ValidateStruct(&a,
+		validation.Field(&a.CredentialType, validation.Required, validation.In("phone", "email")),
+		validation.Field(&a.CredentialValue, validation.Required),
+		validation.Field(&a.Password, validation.Required, validation.Length(5, 15)),
+		validation.Field(&a.CredentialValue, validation.By(func(value interface{}) error {
+			strValue := value.(string)
+			if a.CredentialType == "email" {
+				if !isValidEmail(strValue) {
+					return errors.New("invalid email format")
+				}
+			} else if a.CredentialType == "phone" {
+				if !isValidPhoneNumber(strValue) {
+					return errors.New("invalid phone number format")
+				}
+			}
+			return nil
+		})),
+	)
+}
+
+func (a RegisterRequest) Validate() error {
+	return validation.ValidateStruct(&a,
+		validation.Field(&a.CredentialType, validation.Required, validation.In("phone", "email")),
+		validation.Field(&a.CredentialValue, validation.Required),
+		validation.Field(&a.Name, validation.Required),
+		validation.Field(&a.Password, validation.Required, validation.Length(5, 15)),
+		validation.Field(&a.CredentialValue, validation.By(func(value interface{}) error {
+			strValue := value.(string)
+			if a.CredentialType == "email" {
+				if !isValidEmail(strValue) {
+					return errors.New("invalid email format")
+				}
+			} else if a.CredentialType == "phone" {
+				if !isValidPhoneNumber(strValue) {
+					return errors.New("invalid phone number format")
+				}
+			}
+			return nil
+		})),
+	)
+}
+
+func isValidEmail(email string) bool {
+	emailRegex := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+	return regexp.MustCompile(emailRegex).MatchString(email)
+}
+
+func isValidPhoneNumber(phoneNumber string) bool {
+	if len(phoneNumber) <= 7 && len(phoneNumber) >= 13 {
+		return false
 	}
+	regex := `^\+\d{10}$`
 
-	if lenUsername < 5 || lenPassword < 5 {
-		return errors.New("username and password length must be at least 5 characters")
-	}
+	pattern := regexp.MustCompile(regex)
 
-	if lenUsername > 15 || lenPassword > 15 {
-		return errors.New("username and password length cannot exceed 15 characters")
-	}
-
-	return nil
+	return pattern.MatchString(phoneNumber)
 }
 
 func (u *User) Register(ctx *fiber.Ctx) error {
-	// Parse request body
-	var req struct {
-		Username string `json:"username"`
-		Name     string `json:"name"`
-		Password string `json:"password"`
-	}
+	var req RegisterRequest
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.SendStatus(http.StatusBadRequest)
 	}
 
-	// Validate request body
-	if err := validateUser(req); err != nil {
+	if err := req.Validate(); err != nil {
 		return responses.ErrorBadRequest(ctx, err.Error())
 	}
 
-	// Create user object
 	usr := entity.User{
-		Username: req.Username,
-		Name:     req.Name,
-		Password: req.Password,
+		CredentialValue: req.CredentialValue,
+		CredentialType:  string(req.CredentialType),
+		Name:            req.Name,
+		Password:        req.Password,
 	}
 
-	// Register user
 	result, err := u.Database.Register(ctx.UserContext(), usr)
 	if err != nil {
 		if err.Error() == "EXISTING_USERNAME" {
@@ -94,8 +123,7 @@ func (u *User) Register(ctx *fiber.Ctx) error {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
 
-	// generate access token
-	accessToken, err := utils.GenerateAccessToken(result.Username, result.Id)
+	accessToken, err := utils.GenerateAccessToken(result.CredentialValue, result.Id)
 	if err != nil {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
@@ -103,29 +131,33 @@ func (u *User) Register(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message": "User registered successfully",
 		"data": fiber.Map{
-			"name":        result.Name,
-			"username":    result.Username,
-			"accessToken": accessToken,
+			"name":                result.Name,
+			result.CredentialType: result.CredentialValue,
+			"accessToken":         accessToken,
 		},
 	})
 }
 
 func (u *User) Login(ctx *fiber.Ctx) error {
 	// Parse request body
-	var req struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
+	var req AuthRequest
 	if err := ctx.BodyParser(&req); err != nil {
 		return err
 	}
 
-	if err := validateLogin(req); err != nil {
+	// Validate request body
+	if err := req.Validate(); err != nil {
 		return responses.ErrorBadRequest(ctx, err.Error())
 	}
 
+	usr := entity.User{
+		CredentialValue: req.CredentialValue,
+		CredentialType:  string(req.CredentialType),
+		Password:        req.Password,
+	}
+
 	// login user
-	result, err := u.Database.Login(ctx.UserContext(), req.Username, req.Password)
+	result, err := u.Database.Login(ctx.UserContext(), usr)
 	if err != nil {
 		if err.Error() == "USER_NOT_FOUND" {
 			return responses.ErrorNotFound(ctx, err.Error())
@@ -139,7 +171,7 @@ func (u *User) Login(ctx *fiber.Ctx) error {
 	}
 
 	// generate access token
-	accessToken, err := utils.GenerateAccessToken(result.Username, result.Id)
+	accessToken, err := utils.GenerateAccessToken(result.CredentialValue, result.Id)
 	if err != nil {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
@@ -147,9 +179,9 @@ func (u *User) Login(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "User logged successfully",
 		"data": fiber.Map{
-			"name":        result.Name,
-			"username":    result.Username,
-			"accessToken": accessToken,
+			"name":                result.Name,
+			result.CredentialType: result.CredentialValue,
+			"accessToken":         accessToken,
 		},
 	})
 }
