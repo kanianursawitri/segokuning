@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS users(
     id BIGSERIAL PRIMARY KEY,
-    credential_type VARCHAR NOT NULL,
-    credential_value VARCHAR NOT NULL UNIQUE,
+    email VARCHAR NULL DEFAULT '',
+    phone VARCHAR NULL DEFAULT '',
     "name" VARCHAR NOT NULL,
     "password" VARCHAR NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -9,6 +9,6 @@ CREATE TABLE IF NOT EXISTS users(
 );
 
 -- Create indexes
-CREATE INDEX idx_credential_type ON users (id);
-CREATE INDEX idx_credential_type ON users (credential_type);
-CREATE INDEX idx_credential_value ON users (credential_value);
+CREATE INDEX id ON users (id);
+CREATE INDEX phone ON users (phone);
+CREATE INDEX email ON users (email);

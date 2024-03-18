@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"shopifyx/db/functions"
+	"shopifyx/internal/utils"
 
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/gofiber/fiber/v2"
@@ -12,7 +12,7 @@ import (
 )
 
 type ImageUploader struct {
-	Uploader *functions.ImageUploader
+	Uploader *utils.ImageUploader
 }
 
 func (i *ImageUploader) Upload(c *fiber.Ctx) error {
