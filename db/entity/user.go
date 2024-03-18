@@ -6,4 +6,6 @@ type User struct {
 	Password        string `json:"password,omitempty"`
 	CredentialType  string `json:"credentialType"`
 	CredentialValue string `json:"credentialValue"`
+	Phone           string `json:"phone"`
+	Email           string `json:"email"`
 }

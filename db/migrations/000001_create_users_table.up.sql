@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS users(
     id BIGSERIAL PRIMARY KEY,
-    credential_type VARCHAR NOT NULL,
-    credential_value VARCHAR NOT NULL UNIQUE,
+    email VARCHAR NULL,
+    phone VARCHAR NULL,
     "name" VARCHAR NOT NULL,
     "password" VARCHAR NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

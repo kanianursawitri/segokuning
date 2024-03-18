@@ -99,6 +99,7 @@ func isValidPhoneNumber(phoneNumber string) bool {
 
 func (u *User) Register(ctx *fiber.Ctx) error {
 	var req RegisterRequest
+	var userValue string
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.SendStatus(http.StatusBadRequest)
 	}
@@ -128,12 +129,18 @@ func (u *User) Register(ctx *fiber.Ctx) error {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
 
+	if req.CredentialType == "phone" {
+		userValue = result.Phone
+	} else {
+		userValue = result.Email
+	}
+
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message": "User registered successfully",
 		"data": fiber.Map{
-			"name":                result.Name,
-			result.CredentialType: result.CredentialValue,
-			"accessToken":         accessToken,
+			"name":                     result.Name,
+			string(req.CredentialType): userValue,
+			"accessToken":              accessToken,
 		},
 	})
 }
@@ -141,6 +148,7 @@ func (u *User) Register(ctx *fiber.Ctx) error {
 func (u *User) Login(ctx *fiber.Ctx) error {
 	// Parse request body
 	var req AuthRequest
+	var userValue string
 	if err := ctx.BodyParser(&req); err != nil {
 		return err
 	}
@@ -176,12 +184,18 @@ func (u *User) Login(ctx *fiber.Ctx) error {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
 
+	if req.CredentialType == "phone" {
+		userValue = result.Phone
+	} else {
+		userValue = result.Email
+	}
+
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "User logged successfully",
 		"data": fiber.Map{
-			"name":                result.Name,
-			result.CredentialType: result.CredentialValue,
-			"accessToken":         accessToken,
+			"name":                     result.Name,
+			string(req.CredentialType): userValue,
+			"accessToken":              accessToken,
 		},
 	})
 }
