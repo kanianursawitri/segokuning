@@ -38,33 +38,34 @@ func (u *User) Register(ctx context.Context, usr entity.User) (entity.User, erro
 
 	var existingId string
 
-	err = conn.QueryRow(ctx, `SELECT id FROM users WHERE username = $1`, usr.Username).Scan(&existingId)
+	err = conn.QueryRow(ctx, `SELECT id FROM users WHERE credential_value = $1`, usr.CredentialValue).Scan(&existingId)
 	if existingId != "" {
 		return entity.User{}, errors.New("EXISTING_USERNAME")
 	}
 
 	sql := `
-		INSERT INTO users (name, username, password) VALUES ($1, $2, $3)
+		INSERT INTO users (name, credential_type, credential_value, password) VALUES ($1, $2, $3, $4)
 	`
 
-	_, err = conn.Exec(ctx, sql, usr.Name, usr.Username, string(hashedPassword))
+	_, err = conn.Exec(ctx, sql, usr.Name, usr.CredentialType, usr.CredentialValue, string(hashedPassword))
 
 	var result entity.User
 
-	err = conn.QueryRow(ctx, `SELECT id, name, username FROM users WHERE username = $1`, usr.Username).Scan(&result.Id, &result.Name, &result.Username)
+	err = conn.QueryRow(ctx, `SELECT id, name, credential_type, credential_value FROM users WHERE credential_value = $1`, usr.CredentialValue).Scan(&result.Id, &result.Name, &result.CredentialType, &result.CredentialValue)
 
 	if err != nil {
 		return entity.User{}, err
 	}
 
 	return entity.User{
-		Id:       result.Id,
-		Name:     result.Name,
-		Username: result.Username,
+		Id:              result.Id,
+		Name:            result.Name,
+		CredentialValue: result.CredentialValue,
+		CredentialType:  result.CredentialType,
 	}, nil
 }
 
-func (u *User) Login(ctx context.Context, username, password string) (entity.User, error) {
+func (u *User) Login(ctx context.Context, usr entity.User) (entity.User, error) {
 	conn, err := u.dbPool.Acquire(ctx)
 	if err != nil {
 		return entity.User{}, err
@@ -73,8 +74,8 @@ func (u *User) Login(ctx context.Context, username, password string) (entity.Use
 
 	var result entity.User
 
-	err = conn.QueryRow(ctx, `SELECT id, name, username, password FROM users WHERE username = $1`, username).Scan(
-		&result.Id, &result.Name, &result.Username, &result.Password,
+	err = conn.QueryRow(ctx, `SELECT id, name, credential_type, credential_value, password FROM users WHERE credential_value = $1`, usr.CredentialValue).Scan(
+		&result.Id, &result.Name, &result.CredentialType, &result.CredentialValue, &result.Password,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return result, errors.New("USER_NOT_FOUND")
@@ -84,7 +85,7 @@ func (u *User) Login(ctx context.Context, username, password string) (entity.Use
 	}
 
 	// Compare the provided password with the hashed password from the database
-	if err := bcrypt.CompareHashAndPassword([]byte(result.Password), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(result.Password), []byte(usr.Password)); err != nil {
 		return result, errors.New("INVALID_PASSWORD")
 	}
 
@@ -100,7 +101,7 @@ func (u *User) GetUserById(ctx context.Context, userID string) (entity.User, err
 
 	var result entity.User
 
-	err = conn.QueryRow(ctx, `SELECT id, name, username FROM users WHERE id = $1`, userID).Scan(&result.Id, &result.Name, &result.Username)
+	err = conn.QueryRow(ctx, `SELECT id, name, credential_type, credential_value FROM users WHERE id = $1`, userID).Scan(&result.Id, &result.Name, &result.CredentialType, &result.CredentialValue)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return result, ErrNoRow
 	}
