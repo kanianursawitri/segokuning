@@ -63,7 +63,7 @@ func (a RegisterRequest) Validate() error {
 	return validation.ValidateStruct(&a,
 		validation.Field(&a.CredentialType, validation.Required, validation.In("phone", "email")),
 		validation.Field(&a.CredentialValue, validation.Required),
-		validation.Field(&a.Name, validation.Required),
+		validation.Field(&a.Name, validation.Required, validation.Length(5, 15)),
 		validation.Field(&a.Password, validation.Required, validation.Length(5, 15)),
 		validation.Field(&a.CredentialValue, validation.By(func(value interface{}) error {
 			strValue := value.(string)
