@@ -37,32 +37,40 @@ func (u *User) Register(ctx context.Context, usr entity.User) (entity.User, erro
 	}
 
 	var existingId string
+	var sql string
 
-	err = conn.QueryRow(ctx, `SELECT id FROM users WHERE $1 = $2`, usr.CredentialType, usr.CredentialValue).Scan(&existingId)
+	if usr.CredentialType == "email" {
+		sql = `SELECT id FROM users WHERE email = $1`
+	} else {
+		sql = `SELECT id FROM users WHERE phone = $1`
+	}
+
+	err = conn.QueryRow(ctx, sql, usr.CredentialValue).Scan(&existingId)
 	if existingId != "" {
 		return entity.User{}, errors.New("EXISTING_USERNAME")
 	}
 
-	sql := `
-		INSERT INTO users (name, $1, password) VALUES ($2, $3, $4)
-	`
+	if usr.CredentialType == "email" {
+		sql = `INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, phone, email`
+	} else {
+		sql = `INSERT INTO users (name, phone, password) VALUES ($1, $2, $3) RETURNING id, name, phone, email`
+	}
 
-	_, err = conn.Exec(ctx, sql, usr.CredentialType, usr.Name, usr.CredentialValue, string(hashedPassword))
-
+	_, err = conn.Exec(ctx, sql, usr.Name, usr.CredentialValue, string(hashedPassword))
 	var result entity.User
 
-	err = conn.QueryRow(ctx, `SELECT id, name, phone, email FROM users WHERE $1 = $2`, usr.CredentialType, usr.CredentialValue).Scan(&result.Id, &result.Name, &result.Phone, &result.Email)
+	if usr.CredentialType == "email" {
+		sql = `SELECT id, name, phone, email FROM users WHERE email = $1`
+	} else {
+		sql = `SELECT id, name, phone, email FROM users WHERE phone = $1`
+	}
+	err = conn.QueryRow(ctx, sql, usr.CredentialValue).Scan(&result.Id, &result.Name, &result.Phone, &result.Email)
 
 	if err != nil {
 		return entity.User{}, err
 	}
 
-	return entity.User{
-		Id:              result.Id,
-		Name:            result.Name,
-		CredentialValue: result.CredentialValue,
-		CredentialType:  result.CredentialType,
-	}, nil
+	return result, nil
 }
 
 func (u *User) Login(ctx context.Context, usr entity.User) (entity.User, error) {
@@ -73,8 +81,14 @@ func (u *User) Login(ctx context.Context, usr entity.User) (entity.User, error) 
 	defer conn.Release()
 
 	var result entity.User
+	var sql string
+	if usr.CredentialType == "email" {
+		sql = `SELECT id, name, phone, email name, password FROM users WHERE email = $1`
+	} else {
+		sql = `SELECT id, name, phone, email name, password FROM users WHERE phone = $1`
+	}
 
-	err = conn.QueryRow(ctx, `SELECT id, name, phone, email name, password FROM users WHERE $1 = $2`, usr.CredentialType, usr.CredentialValue).Scan(
+	err = conn.QueryRow(ctx, sql, usr.CredentialValue).Scan(
 		&result.Id, &result.Name, &result.Phone, &result.Email, &result.Password,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
