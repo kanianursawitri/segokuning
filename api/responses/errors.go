@@ -43,3 +43,10 @@ func ErrorUnauthorized(c *fiber.Ctx, m string) error {
 		"message": m,
 	})
 }
+
+func Success(c *fiber.Ctx, m interface{}) error {
+	return c.Status(200).JSON(map[string]interface{}{
+		"status": "Success",
+		"data":   m,
+	})
+}
