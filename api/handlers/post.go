@@ -19,6 +19,46 @@ type (
 		PostInHtml string   `json:"postInHtml"`
 		Tags       []string `json:"tags"`
 	}
+
+	QueryGetPosts struct {
+		Limit      int      `query:"limit"`
+		Offset     int      `query:"offset"`
+		Search     string   `query:"search"`
+		SearchTags []string `query:"searchTags"`
+	}
+
+	GetPostsResponse struct {
+		Message string `json:"message"`
+		Data    []struct {
+			Post struct {
+				PostInHtml string   `json:"postInHtml"`
+				Tags       []string `json:"tags"`
+				CreatedAt  string   `json:"createdAt"`
+			} `json:"post"`
+			Comments []struct {
+				Comment string `json:"comment"`
+				Creator struct {
+					UserId      string `json:"userId"`
+					Name        string `json:"name"`
+					ImageUrl    string `json:"imageUrl"`
+					FriendCount int    `json:"friendCount"`
+					CreatedAt   string `json:"createdAt"`
+				} `json:"creator"`
+			} `json:"comments"`
+			Creator struct {
+				UserId      string `json:"userId"`
+				Name        string `json:"name"`
+				ImageUrl    string `json:"imageUrl"`
+				FriendCount int    `json:"friendCount"`
+				CreatedAt   string `json:"createdAt"`
+			} `json:"creator"`
+		} `json:"data"`
+		Meta struct {
+			Limit  int `json:"limit"`
+			Offset int `json:"offset"`
+			Total  int `json:"total"`
+		} `json:"meta"`
+	}
 )
 
 func (ap AddPostRequest) Validate() error {
@@ -27,6 +67,15 @@ func (ap AddPostRequest) Validate() error {
 		validation.Field(&ap.PostInHtml, validation.Required, validation.Length(2, 500)),
 		// Tags is not null
 		validation.Field(&ap.Tags, validation.Required),
+	)
+}
+
+func (qgp QueryGetPosts) Validate() error {
+	return validation.ValidateStruct(&qgp,
+		// Limit is optional, default 5
+		validation.Field(&qgp.Limit, validation.Min(0)),
+		// Offset is optional, default 0
+		validation.Field(&qgp.Offset, validation.Min(0)),
 	)
 }
 
@@ -64,4 +113,27 @@ func (p *Post) AddPost(ctx *fiber.Ctx) error {
 	}
 
 	return responses.Success(ctx, post)
+}
+
+// GetPosts is a handler to get posts
+func (p *Post) GetPosts(ctx *fiber.Ctx) error {
+	var (
+		req QueryGetPosts
+		err error
+	)
+
+	if err := ctx.QueryParser(&req); err != nil {
+		return responses.ErrorBadRequest(ctx, err.Error())
+	}
+
+	if err := req.Validate(); err != nil {
+		return responses.ErrorBadRequest(ctx, err.Error())
+	}
+
+	posts, err := p.Database.Get(ctx.Context(), req)
+	if err != nil {
+		return responses.ErrorInternalServerError(ctx, err.Error())
+	}
+
+	return responses.Success(ctx, posts)
 }

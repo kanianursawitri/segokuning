@@ -45,7 +45,6 @@ func LoadConfig() (Config, error) {
 		S3SecretKey: os.Getenv("S3_SECRET_KEY"),
 		S3BaseURL:   os.Getenv("S3_BASE_URL"),
 	}
-
 	salt, err := strconv.Atoi(os.Getenv("BCRYPT_SALT"))
 	if err != nil {
 		return Config{}, fmt.Errorf("failed get bcrypt salt %v", err)
