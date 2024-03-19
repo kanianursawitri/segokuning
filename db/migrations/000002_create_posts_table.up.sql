@@ -7,5 +7,4 @@ create table if not exists posts(
 );
 
 -- Create indexes
-create index id on posts (id);
 create index user_id on posts (user_id);

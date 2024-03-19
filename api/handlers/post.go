@@ -79,6 +79,15 @@ func (qgp QueryGetPosts) Validate() error {
 	)
 }
 
+func (qgp QueryGetPosts) ToEntity() entity.QueryGetPosts {
+	return entity.QueryGetPosts{
+		Limit:      qgp.Limit,
+		Offset:     qgp.Offset,
+		Search:     qgp.Search,
+		SearchTags: qgp.SearchTags,
+	}
+}
+
 // AddPost is a handler to add a post
 func (p *Post) AddPost(ctx *fiber.Ctx) error {
 	var (
@@ -130,7 +139,7 @@ func (p *Post) GetPosts(ctx *fiber.Ctx) error {
 		return responses.ErrorBadRequest(ctx, err.Error())
 	}
 
-	posts, err := p.Database.Get(ctx.Context(), req)
+	posts, err := p.Database.Get(ctx.Context(), req.ToEntity())
 	if err != nil {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}

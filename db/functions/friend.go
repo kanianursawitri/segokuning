@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"shopifyx/configs"
+	"shopifyx/db/entity"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,10 +29,10 @@ func (f *Friend) IsFriend(ctx context.Context, userID, friendID int) (bool, erro
 	}
 	defer conn.Release()
 
-	sql := `SELECT id FROM friends WHERE (first_user_id = $1 AND second_friend_id = $2) OR (first_user_id = $2 AND second_friend_id = $1)`
+	sql := `SELECT first_user_id FROM friends WHERE (first_user_id = $1 AND second_user_id = $2) OR (first_user_id = $2 AND second_user_id = $1)`
 	row := conn.QueryRow(ctx, sql, userID, friendID)
-	var id int
-	err = row.Scan(&id)
+	var friend entity.Friend
+	err = row.Scan(&friend.FirstUserID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil

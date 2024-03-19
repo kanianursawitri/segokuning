@@ -24,4 +24,11 @@ type (
 		CreatedAt  time.Time        `json:"createdAt"`
 		Comments   []CommentPerPost `json:"comments"`
 	}
+
+	QueryGetPosts struct {
+		Limit      int      `query:"limit"`
+		Offset     int      `query:"offset"`
+		Search     string   `query:"search"`
+		SearchTags []string `query:"searchTags"`
+	}
 )

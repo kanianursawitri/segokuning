@@ -28,7 +28,7 @@ func (c *Comment) Add(ctx context.Context, comment entity.Comment) (entity.Comme
 	defer conn.Release()
 
 	sql := `INSERT INTO comments (comment, user_id, post_id) VALUES ($1, $2, $3) RETURNING id,created_at`
-	err = conn.QueryRow(ctx, sql, comment.Comment, comment.UserID, comment.PostID).Scan(&comment.ID, &comment.CreatedAt)
+	err = conn.QueryRow(ctx, sql, comment.Comment, comment.UserID, comment.PostID).Scan(&comment.Id, &comment.CreatedAt)
 	if err != nil {
 		return entity.Comment{}, err
 	}

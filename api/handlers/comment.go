@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"shopifyx/api/responses"
 	"shopifyx/db/entity"
 	"shopifyx/db/functions"
@@ -34,27 +35,34 @@ func (acr AddCommentRequest) Validate() error {
 func (c *Comment) AddComment(ctx *fiber.Ctx) error {
 	var acr AddCommentRequest
 	if err := ctx.BodyParser(&acr); err != nil {
-		return responses.ErrBadRequest(ctx, err.Error())
+		return responses.ErrorBadRequest(ctx, err.Error())
 	}
 
 	if err := acr.Validate(); err != nil {
-		return responses.ErrBadRequest(ctx, err.Error())
+		return responses.ErrorBadRequest(ctx, err.Error())
 	}
 
 	userIDClaim := ctx.Locals("user_id").(string)
-	userID, err = strconv.Atoi(userIDClaim)
+	userID, err := strconv.Atoi(userIDClaim)
+	if err != nil {
+		return responses.ErrorInternalServerError(ctx, err.Error())
+	}
+
+	postID, err := strconv.Atoi(acr.PostID)
 	if err != nil {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
 
 	// If post is not found return 404
-	post, err := c.PostDatabase.GetByID(ctx.Context(), acr.PostID)
+	post, err := c.PostDatabase.GetByID(ctx.Context(), postID)
 	if err != nil {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
-	if post.ID == 0 {
+	if post.Id == 0 {
 		return responses.ErrorNotFound(ctx, "Post not found")
 	}
+
+	fmt.Println(">>>>", post)
 
 	// if post is found but not comes from the user's friend return 400
 	isFriend, err := c.FriendDatabase.IsFriend(ctx.Context(), post.UserID, userID)
@@ -67,7 +75,7 @@ func (c *Comment) AddComment(ctx *fiber.Ctx) error {
 
 	comment := entity.Comment{
 		Comment: acr.Comment,
-		PostID:  acr.PostID,
+		PostID:  postID,
 		UserID:  userID,
 	}
 

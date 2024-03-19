@@ -7,6 +7,4 @@ create table if not exists comments(
 );
 
 -- Create indexes
-create index id on comments (id);
 create index post_id on comments (post_id);
-create index user_id on comments (user_id);

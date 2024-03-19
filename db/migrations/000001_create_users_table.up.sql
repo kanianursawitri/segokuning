@@ -10,6 +10,5 @@ CREATE TABLE IF NOT EXISTS users(
 );
 
 -- Create indexes
-CREATE INDEX id ON users (id);
 CREATE INDEX phone ON users (phone);
 CREATE INDEX email ON users (email);
