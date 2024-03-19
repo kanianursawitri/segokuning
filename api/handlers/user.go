@@ -40,12 +40,7 @@ type RegisterRequest struct {
 
 func (a AuthRequest) Validate() error {
 	return validation.ValidateStruct(&a,
-		validation.Field(&a.CredentialType, validation.Required, validation.By(func(value interface{}) error {
-			if a.CredentialType != "email" && a.CredentialType != "phone" {
-				return errors.New("invalid credential type")
-			}
-			return nil
-		})),
+		validation.Field(&a.CredentialType, validation.Required, validation.In(Phone, Email)),
 		validation.Field(&a.CredentialValue, validation.Required),
 		validation.Field(&a.Password, validation.Required, validation.Length(5, 15)),
 		validation.Field(&a.CredentialValue, validation.By(func(value interface{}) error {
@@ -66,12 +61,7 @@ func (a AuthRequest) Validate() error {
 
 func (a RegisterRequest) Validate() error {
 	return validation.ValidateStruct(&a,
-		validation.Field(&a.CredentialType, validation.Required, validation.By(func(value interface{}) error {
-			if a.CredentialType != "email" && a.CredentialType != "phone" {
-				return errors.New("invalid credential type")
-			}
-			return nil
-		})),
+		validation.Field(&a.CredentialType, validation.Required, validation.In(Phone, Email)),
 		validation.Field(&a.CredentialValue, validation.Required),
 		validation.Field(&a.Name, validation.Required, validation.Length(5, 15)),
 		validation.Field(&a.Password, validation.Required, validation.Length(5, 15)),
@@ -97,13 +87,14 @@ func isValidEmail(email string) bool {
 }
 
 func isValidPhoneNumber(phoneNumber string) bool {
-	if len(phoneNumber) <= 7 && len(phoneNumber) >= 13 {
+	if len(phoneNumber) < 7 || len(phoneNumber) > 13 {
 		return false
 	}
-	regex := `^\+\d{10}$`
-
+	if phoneNumber[0] != '+' {
+		return false
+	}
+	regex := `^\+\d+$`
 	pattern := regexp.MustCompile(regex)
-
 	return pattern.MatchString(phoneNumber)
 }
 
