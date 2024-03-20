@@ -21,7 +21,6 @@ func RouteRegister(app *fiber.App, deps handlers.Dependencies) {
 	}
 
 	commentHandler := handlers.Comment{
-		Database:       functions.NewComment(deps.DbPool, deps.Cfg),
 		PostDatabase:   functions.NewPost(deps.DbPool, deps.Cfg),
 		FriendDatabase: functions.NewFriend(deps.DbPool, deps.Cfg),
 	}

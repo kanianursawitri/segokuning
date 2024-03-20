@@ -73,7 +73,7 @@ func (ap AddPostRequest) Validate() error {
 func (qgp QueryGetPosts) Validate() error {
 	return validation.ValidateStruct(&qgp,
 		// Limit is optional, default 5
-		validation.Field(&qgp.Limit, validation.Min(0)),
+		validation.Field(&qgp.Limit, validation.Min(1)),
 		// Offset is optional, default 0
 		validation.Field(&qgp.Offset, validation.Min(0)),
 	)
@@ -137,6 +137,10 @@ func (p *Post) GetPosts(ctx *fiber.Ctx) error {
 
 	if err := req.Validate(); err != nil {
 		return responses.ErrorBadRequest(ctx, err.Error())
+	}
+
+	if req.Limit == 0 {
+		req.Limit = 5
 	}
 
 	posts, err := p.Database.Get(ctx.Context(), req.ToEntity())

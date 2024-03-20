@@ -12,8 +12,9 @@ type (
 	}
 
 	CommentPerPost struct {
-		Comment string  `json:"comment"`
-		Creator Creator `json:"creator"`
+		Comment   string    `json:"comment"`
+		Creator   Creator   `json:"creator"`
+		CreatedAt time.Time `json:"createdAt"`
 	}
 
 	Post struct {

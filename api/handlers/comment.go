@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"fmt"
 	"shopifyx/api/responses"
 	"shopifyx/db/entity"
 	"shopifyx/db/functions"
 	"strconv"
+	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/gofiber/fiber/v2"
@@ -13,7 +13,6 @@ import (
 
 type (
 	Comment struct {
-		Database       *functions.Comment
 		PostDatabase   *functions.Post
 		FriendDatabase *functions.Friend
 	}
@@ -62,8 +61,6 @@ func (c *Comment) AddComment(ctx *fiber.Ctx) error {
 		return responses.ErrorNotFound(ctx, "Post not found")
 	}
 
-	fmt.Println(">>>>", post)
-
 	// if post is found but not comes from the user's friend return 400
 	isFriend, err := c.FriendDatabase.IsFriend(ctx.Context(), post.UserID, userID)
 	if err != nil {
@@ -73,13 +70,15 @@ func (c *Comment) AddComment(ctx *fiber.Ctx) error {
 		return responses.ErrorBadRequest(ctx, "You can only comment on your friend's post")
 	}
 
-	comment := entity.Comment{
-		Comment: acr.Comment,
-		PostID:  postID,
-		UserID:  userID,
+	comment := entity.CommentPerPost{
+		Comment:   acr.Comment,
+		CreatedAt: time.Now(),
+		Creator: entity.Creator{
+			UserId: userID,
+		},
 	}
 
-	comment, err = c.Database.Add(ctx.Context(), comment)
+	comment, err = c.PostDatabase.AddComment(ctx.Context(), postID, comment)
 	if err != nil {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}

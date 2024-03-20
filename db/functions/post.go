@@ -2,12 +2,15 @@ package functions
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"shopifyx/configs"
 	"shopifyx/db/entity"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/lib/pq"
 )
 
 type Post struct {
@@ -38,6 +41,28 @@ func (p *Post) Add(ctx context.Context, post entity.Post) (entity.Post, error) {
 	return post, nil
 }
 
+func (p *Post) AddComment(ctx context.Context, postID int, comment entity.CommentPerPost) (entity.CommentPerPost, error) {
+	conn, err := p.dbPool.Acquire(ctx)
+	if err != nil {
+		return entity.CommentPerPost{}, err
+	}
+	defer conn.Release()
+
+	commentJSON, err := json.Marshal(comment)
+	if err != nil {
+		return entity.CommentPerPost{}, err
+	}
+
+	sql := `UPDATE posts SET comments = comments || $1 WHERE id = $2 RETURNING created_at`
+	fmt.Println(sql, commentJSON, postID)
+	err = conn.QueryRow(ctx, sql, commentJSON, postID).Scan(&comment.CreatedAt)
+	if err != nil {
+		return entity.CommentPerPost{}, err
+	}
+
+	return comment, nil
+}
+
 func (p *Post) GetByID(ctx context.Context, postID int) (entity.Post, error) {
 	conn, err := p.dbPool.Acquire(ctx)
 	if err != nil {
@@ -66,8 +91,34 @@ func (p *Post) Get(ctx context.Context, query entity.QueryGetPosts) ([]entity.Po
 	}
 	defer conn.Release()
 
-	sql := `SELECT id, post_in_html, tags, user_id, created_at FROM posts LIMIT $1 OFFSET $2`
-	rows, err := conn.Query(ctx, sql, query.Limit, query.Offset)
+	var (
+		sql        = `SELECT id, post_in_html, tags, user_id, created_at, comments FROM posts where 1 = 1`
+		arg        = 1
+		args []any = []any{}
+	)
+
+	if query.Search != "" {
+		sql = fmt.Sprintf("%s, AND post_in_html LIKE '%%%s%%'", sql, query.Search)
+	}
+
+	if len(query.SearchTags) > 0 {
+		sql = fmt.Sprintf("%s AND $%v <@ tags", sql, arg)
+		args = append(args, pq.Array(query.SearchTags))
+		arg++
+	}
+
+	sql = fmt.Sprintf("%s LIMIT $%d", sql, arg)
+	args = append(args, query.Limit)
+	arg++
+
+	sql = fmt.Sprintf("%s OFFSET $%d", sql, arg)
+	args = append(args, query.Offset)
+	arg++
+
+	fmt.Println(sql)
+	fmt.Println(args...)
+
+	rows, err := conn.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +127,7 @@ func (p *Post) Get(ctx context.Context, query entity.QueryGetPosts) ([]entity.Po
 	posts := make([]entity.Post, 0)
 	for rows.Next() {
 		var post entity.Post
-		err = rows.Scan(&post.Id, &post.PostInHtml, &post.Tags, &post.UserID, &post.CreatedAt)
+		err = rows.Scan(&post.Id, &post.PostInHtml, &post.Tags, &post.UserID, &post.CreatedAt, &post.Comments)
 		if err != nil {
 			return nil, err
 		}
