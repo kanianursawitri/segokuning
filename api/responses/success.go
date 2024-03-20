@@ -41,3 +41,10 @@ func ReturnTheResponseUpload(c *fiber.Ctx, se bool, sc int, m string, f string) 
 
 	return c.Status(sc).JSON(tr)
 }
+
+func Success(c *fiber.Ctx, m interface{}) error {
+	return c.Status(200).JSON(map[string]interface{}{
+		"status": "Success",
+		"data":   m,
+	})
+}
