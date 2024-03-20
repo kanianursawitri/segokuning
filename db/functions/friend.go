@@ -29,10 +29,10 @@ func (f *Friend) IsFriend(ctx context.Context, userID, friendID int) (bool, erro
 	}
 	defer conn.Release()
 
-	sql := `SELECT first_user_id FROM friends WHERE (first_user_id = $1 AND second_user_id = $2) OR (first_user_id = $2 AND second_user_id = $1)`
+	sql := `SELECT id FROM friends WHERE user_id = $1 AND friend_id = $2`
 	row := conn.QueryRow(ctx, sql, userID, friendID)
 	var friend entity.Friend
-	err = row.Scan(&friend.FirstUserID)
+	err = row.Scan(&friend.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil

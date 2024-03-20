@@ -97,6 +97,11 @@ func (p *Post) Get(ctx context.Context, query entity.QueryGetPosts) ([]entity.Po
 		args []any = []any{}
 	)
 
+	// only show post from friends join with friends table
+	sql = fmt.Sprintf("%s AND user_id IN (SELECT friend_id FROM friends WHERE user_id = $%d)", sql, arg)
+	args = append(args, query.UserId)
+	arg++
+
 	if query.Search != "" {
 		sql = fmt.Sprintf("%s, AND post_in_html LIKE '%%%s%%'", sql, query.Search)
 	}
@@ -114,9 +119,6 @@ func (p *Post) Get(ctx context.Context, query entity.QueryGetPosts) ([]entity.Po
 	sql = fmt.Sprintf("%s OFFSET $%d", sql, arg)
 	args = append(args, query.Offset)
 	arg++
-
-	fmt.Println(sql)
-	fmt.Println(args...)
 
 	rows, err := conn.Query(ctx, sql, args...)
 	if err != nil {

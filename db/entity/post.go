@@ -27,6 +27,7 @@ type (
 	}
 
 	QueryGetPosts struct {
+		UserId     int      `query:"userId"`
 		Limit      int      `query:"limit"`
 		Offset     int      `query:"offset"`
 		Search     string   `query:"search"`

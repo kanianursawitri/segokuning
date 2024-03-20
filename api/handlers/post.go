@@ -79,8 +79,9 @@ func (qgp QueryGetPosts) Validate() error {
 	)
 }
 
-func (qgp QueryGetPosts) ToEntity() entity.QueryGetPosts {
+func (qgp QueryGetPosts) ToEntity(userID int) entity.QueryGetPosts {
 	return entity.QueryGetPosts{
+		UserId:     userID,
 		Limit:      qgp.Limit,
 		Offset:     qgp.Offset,
 		Search:     qgp.Search,
@@ -143,7 +144,13 @@ func (p *Post) GetPosts(ctx *fiber.Ctx) error {
 		req.Limit = 5
 	}
 
-	posts, err := p.Database.Get(ctx.Context(), req.ToEntity())
+	userIDClaim := ctx.Locals("user_id").(string)
+	userID, err := strconv.Atoi(userIDClaim)
+	if err != nil {
+		return responses.ErrorInternalServerError(ctx, err.Error())
+	}
+
+	posts, err := p.Database.Get(ctx.Context(), req.ToEntity(userID))
 	if err != nil {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
