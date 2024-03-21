@@ -136,20 +136,15 @@ func (u *User) UpdateEmail(ctx context.Context, userID string, email string) (en
 	var result entity.User
 
 	// Check if the email already exists
-	var existingEmail string
+	var existingEmail *string
 	err = conn.QueryRow(ctx, `SELECT email FROM users WHERE email = $1`, email).Scan(&existingEmail)
-	if err == nil {
-		return result, errors.New("EMAIL_EXISTS") // Returning 409 error
-	} else if err != pgx.ErrNoRows {
-		return result, err
+	if existingEmail != nil {
+		return result, errors.New("EMAIL_EXISTS")
 	}
-
 	// Check if the user already has an email
 	err = conn.QueryRow(ctx, `SELECT email FROM users WHERE id = $1`, userID).Scan(&existingEmail)
-	if err == nil {
-		return result, errors.New("EMAIL_ALREADY_SET") // Returning 400 error
-	} else if err != pgx.ErrNoRows {
-		return result, err
+	if existingEmail != nil {
+		return result, errors.New("EMAIL_ALREADY_SET")
 	}
 
 	// If no errors, proceed to update the email
@@ -177,16 +172,12 @@ func (u *User) UpdatePhone(ctx context.Context, userID string, phone string) (en
 	err = conn.QueryRow(ctx, `SELECT phone FROM users WHERE phone = $1`, phone).Scan(&existingPhone)
 	if err == nil {
 		return result, errors.New("PHONE_EXISTS") // Returning 409 error
-	} else if err != pgx.ErrNoRows {
-		return result, err
 	}
 
 	// Check if the user already has a phone
 	err = conn.QueryRow(ctx, `SELECT phone FROM users WHERE id = $1`, userID).Scan(&existingPhone)
 	if err == nil {
 		return result, errors.New("PHONE_ALREADY_SET") // Returning 400 error
-	} else if err != pgx.ErrNoRows {
-		return result, err
 	}
 
 	// If no errors, proceed to update the phone

@@ -12,7 +12,6 @@ func UserRoutes(app *fiber.App, userHandler handlers.User) {
 	g.Post("/register", userHandler.Register)
 	g.Post("/login", userHandler.Login)
 	// protected routes
-	gp := g.Use(middleware.OptionalJWTAuth())
-	gp.Post("/link/email", userHandler.UpdateEmail)
-	gp.Post("/link/phone", userHandler.UpdatePhone)
+	g.Post("/link/email", middleware.JWTAuth(), userHandler.UpdateEmail)
+	g.Post("/link/phone", middleware.JWTAuth(), userHandler.UpdatePhone)
 }

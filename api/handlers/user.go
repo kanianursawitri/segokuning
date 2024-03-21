@@ -232,7 +232,7 @@ func (u *User) UpdateEmail(ctx *fiber.Ctx) error {
 	// Parse request body
 	var req UpdateEmailRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return err
+		return responses.ErrorBadRequest(ctx, err.Error())
 	}
 
 	// Validate request body
@@ -276,7 +276,7 @@ func (u *User) UpdatePhone(ctx *fiber.Ctx) error {
 	// Parse request body
 	var req UpdatePhoneRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return err
+		return responses.ErrorBadRequest(ctx, err.Error())
 	}
 
 	// Validate request body
