@@ -38,6 +38,14 @@ type RegisterRequest struct {
 	Password        string         `json:"password"`
 }
 
+type UpdateEmailRequest struct {
+	Email string `json:"email"`
+}
+
+type UpdatePhoneRequest struct {
+	Phone string `json:"phone"`
+}
+
 func (a AuthRequest) Validate() error {
 	return validation.ValidateStruct(&a,
 		validation.Field(&a.CredentialType, validation.Required, validation.In(Phone, Email)),
@@ -75,6 +83,30 @@ func (a RegisterRequest) Validate() error {
 				if !isValidPhoneNumber(strValue) {
 					return errors.New("invalid phone number format")
 				}
+			}
+			return nil
+		})),
+	)
+}
+
+func (a UpdateEmailRequest) Validate() error {
+	return validation.ValidateStruct(&a,
+		validation.Field(&a.Email, validation.Required, validation.By(func(value interface{}) error {
+			strValue := value.(string)
+			if !isValidEmail(strValue) {
+				return errors.New("invalid email format")
+			}
+			return nil
+		})),
+	)
+}
+
+func (a UpdatePhoneRequest) Validate() error {
+	return validation.ValidateStruct(&a,
+		validation.Field(&a.Phone, validation.Required, validation.By(func(value interface{}) error {
+			strValue := value.(string)
+			if !isValidPhoneNumber(strValue) {
+				return errors.New("invalid phone number format")
 			}
 			return nil
 		})),
@@ -149,7 +181,6 @@ func (u *User) Register(ctx *fiber.Ctx) error {
 func (u *User) Login(ctx *fiber.Ctx) error {
 	// Parse request body
 	var req AuthRequest
-	var userValue *string
 	if err := ctx.BodyParser(&req); err != nil {
 		return err
 	}
@@ -185,18 +216,100 @@ func (u *User) Login(ctx *fiber.Ctx) error {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
 
-	if req.CredentialType == "phone" {
-		userValue = result.Phone
-	} else {
-		userValue = result.Email
-	}
-
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "User logged successfully",
 		"data": fiber.Map{
-			"name":                     result.Name,
-			string(req.CredentialType): userValue,
-			"accessToken":              accessToken,
+			"name":        result.Name,
+			"phone":       result.Phone,
+			"email":       result.Email,
+			"accessToken": accessToken,
+		},
+	})
+}
+
+func (u *User) UpdateEmail(ctx *fiber.Ctx) error {
+	userIDClaim := ctx.Locals("user_id").(string)
+	// Parse request body
+	var req UpdateEmailRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return err
+	}
+
+	// Validate request body
+	if err := req.Validate(); err != nil {
+		return responses.ErrorBadRequest(ctx, err.Error())
+	}
+
+	var user entity.User
+	var err error
+
+	// Update user email
+	if user, err = u.Database.UpdateEmail(ctx.UserContext(), userIDClaim, req.Email); err != nil {
+		return responses.ErrorInternalServerError(ctx, err.Error())
+	}
+
+	if err != nil {
+		if err.Error() == "EMAIL_EXISTS" {
+			return responses.ErrorConflict(ctx, err.Error())
+		}
+		if err.Error() == "EMAIL_ALREADY_SET" {
+			return responses.ErrorBadRequest(ctx, err.Error())
+		}
+		if err.Error() == "USER_NOT_FOUND" {
+			return responses.ErrorNotFound(ctx, err.Error())
+		}
+		return responses.ErrorInternalServerError(ctx, err.Error())
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Email updated successfully",
+		"data": fiber.Map{
+			"name":  user.Name,
+			"phone": user.Phone,
+			"email": user.Email,
+		},
+	})
+}
+
+func (u *User) UpdatePhone(ctx *fiber.Ctx) error {
+	userIDClaim := ctx.Locals("user_id").(string)
+	// Parse request body
+	var req UpdatePhoneRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return err
+	}
+
+	// Validate request body
+	if err := req.Validate(); err != nil {
+		return responses.ErrorBadRequest(ctx, err.Error())
+	}
+
+	var user entity.User
+	var err error
+
+	// Update user phone
+	if user, err = u.Database.UpdatePhone(ctx.UserContext(), userIDClaim, req.Phone); err != nil {
+		return responses.ErrorInternalServerError(ctx, err.Error())
+	}
+	if err != nil {
+		if err.Error() == "PHONE_EXISTS" {
+			return responses.ErrorConflict(ctx, err.Error())
+		}
+		if err.Error() == "PHONE_ALREADY_SET" {
+			return responses.ErrorBadRequest(ctx, err.Error())
+		}
+		if err.Error() == "USER_NOT_FOUND" {
+			return responses.ErrorNotFound(ctx, err.Error())
+		}
+		return responses.ErrorInternalServerError(ctx, err.Error())
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Phone updated successfully",
+		"data": fiber.Map{
+			"name":  user.Name,
+			"phone": user.Phone,
+			"email": user.Email,
 		},
 	})
 }
