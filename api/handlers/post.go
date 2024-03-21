@@ -27,37 +27,46 @@ type (
 		SearchTags []string `query:"searchTags"`
 	}
 
+	PostData struct {
+		PostInHtml string   `json:"postInHtml"`
+		Tags       []string `json:"tags"`
+		CreatedAt  string   `json:"createdAt"`
+	}
+
+	Creator struct {
+		UserId      string `json:"userId"`
+		Name        string `json:"name"`
+		ImageUrl    string `json:"imageUrl"`
+		FriendCount int    `json:"friendCount"`
+	}
+
+	CreatorPost struct {
+		Creator
+		CreatedAt string `json:"createdAt"`
+	}
+	CommentPerPost struct {
+		Comment   string  `json:"comment"`
+		Creator   Creator `json:"creator"`
+		CreatedAt string  `json:"createdAt"`
+	}
+
+	ElemData struct {
+		PostId   int              `json:"postId"`
+		Post     PostData         `json:"post"`
+		Comments []CommentPerPost `json:"comments"`
+		Creator  CreatorPost      `json:"creator"`
+	}
+
+	Meta struct {
+		Limit  int `json:"limit"`
+		Offset int `json:"offset"`
+		Total  int `json:"total"`
+	}
+
 	GetPostsResponse struct {
-		Message string `json:"message"`
-		Data    []struct {
-			Post struct {
-				PostInHtml string   `json:"postInHtml"`
-				Tags       []string `json:"tags"`
-				CreatedAt  string   `json:"createdAt"`
-			} `json:"post"`
-			Comments []struct {
-				Comment string `json:"comment"`
-				Creator struct {
-					UserId      string `json:"userId"`
-					Name        string `json:"name"`
-					ImageUrl    string `json:"imageUrl"`
-					FriendCount int    `json:"friendCount"`
-					CreatedAt   string `json:"createdAt"`
-				} `json:"creator"`
-			} `json:"comments"`
-			Creator struct {
-				UserId      string `json:"userId"`
-				Name        string `json:"name"`
-				ImageUrl    string `json:"imageUrl"`
-				FriendCount int    `json:"friendCount"`
-				CreatedAt   string `json:"createdAt"`
-			} `json:"creator"`
-		} `json:"data"`
-		Meta struct {
-			Limit  int `json:"limit"`
-			Offset int `json:"offset"`
-			Total  int `json:"total"`
-		} `json:"meta"`
+		Message string     `json:"message"`
+		Data    []ElemData `json:"data"`
+		Meta    Meta       `json:"meta"`
 	}
 )
 
@@ -87,6 +96,38 @@ func (qgp QueryGetPosts) ToEntity(userID int) entity.QueryGetPosts {
 		Search:     qgp.Search,
 		SearchTags: qgp.SearchTags,
 	}
+}
+
+func convertEntityPostsToResponse(posts []entity.Post) []ElemData {
+	var elemData []ElemData
+	for _, post := range posts {
+		var comments []CommentPerPost
+		for _, comment := range post.Comments {
+			comments = append(comments, CommentPerPost{
+				Comment:   comment.Comment,
+				Creator:   Creator{UserId: strconv.Itoa(comment.Creator.UserId)},
+				CreatedAt: comment.CreatedAt.String(),
+			})
+		}
+
+		elemData = append(elemData, ElemData{
+			PostId: post.Id,
+			Post: PostData{
+				PostInHtml: post.PostInHtml,
+				Tags:       post.Tags,
+				CreatedAt:  post.CreatedAt.String(),
+			},
+			Comments: comments,
+			Creator: CreatorPost{
+				Creator: Creator{
+					UserId: strconv.Itoa(post.UserID),
+				},
+				CreatedAt: post.CreatedAt.String(),
+			},
+		})
+	}
+
+	return elemData
 }
 
 // AddPost is a handler to add a post
@@ -150,10 +191,26 @@ func (p *Post) GetPosts(ctx *fiber.Ctx) error {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
 
-	posts, err := p.Database.Get(ctx.Context(), req.ToEntity(userID))
+	filter := req.ToEntity(userID)
+	posts, err := p.Database.Get(ctx.Context(), filter)
 	if err != nil {
 		return responses.ErrorInternalServerError(ctx, err.Error())
 	}
 
-	return responses.Success(ctx, posts)
+	count, err := p.Database.Count(ctx.Context(), filter)
+	if err != nil {
+		return responses.ErrorInternalServerError(ctx, err.Error())
+	}
+
+	response := GetPostsResponse{
+		Message: "Success",
+		Data:    convertEntityPostsToResponse(posts),
+		Meta: Meta{
+			Limit:  req.Limit,
+			Offset: req.Offset,
+			Total:  count,
+		},
+	}
+
+	return responses.Success(ctx, response)
 }

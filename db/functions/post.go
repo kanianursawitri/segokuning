@@ -98,9 +98,9 @@ func (p *Post) Get(ctx context.Context, query entity.QueryGetPosts) ([]entity.Po
 	)
 
 	// only show post from friends join with friends table
-	sql = fmt.Sprintf("%s AND user_id IN (SELECT friend_id FROM friends WHERE user_id = $%d)", sql, arg)
-	args = append(args, query.UserId)
-	arg++
+	sql = fmt.Sprintf("%s AND user_id IN (SELECT friend_id FROM friends WHERE user_id = $%d UNION SELECT $%d)", sql, arg, arg+1)
+	args = append(args, query.UserId, query.UserId)
+	arg += 2
 
 	if query.Search != "" {
 		sql = fmt.Sprintf("%s, AND post_in_html LIKE '%%%s%%'", sql, query.Search)
@@ -111,6 +111,8 @@ func (p *Post) Get(ctx context.Context, query entity.QueryGetPosts) ([]entity.Po
 		args = append(args, pq.Array(query.SearchTags))
 		arg++
 	}
+
+	sql = fmt.Sprintf("%s ORDER BY created_at DESC", sql)
 
 	sql = fmt.Sprintf("%s LIMIT $%d", sql, arg)
 	args = append(args, query.Limit)
@@ -133,8 +135,52 @@ func (p *Post) Get(ctx context.Context, query entity.QueryGetPosts) ([]entity.Po
 		if err != nil {
 			return nil, err
 		}
+
+		//sort comments by created_at desc
+		for i, j := 0, len(post.Comments)-1; i < j; i, j = i+1, j-1 {
+			post.Comments[i], post.Comments[j] = post.Comments[j], post.Comments[i]
+		}
+
 		posts = append(posts, post)
 	}
 
 	return posts, nil
+}
+
+func (p *Post) Count(ctx context.Context, query entity.QueryGetPosts) (int, error) {
+	conn, err := p.dbPool.Acquire(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Release()
+
+	var (
+		sql        = `SELECT COUNT(*) FROM posts where 1 = 1`
+		arg        = 1
+		args []any = []any{}
+	)
+
+	// only show post from friends join with friends table
+	sql = fmt.Sprintf("%s AND user_id IN (SELECT friend_id FROM friends WHERE user_id = $%d UNION SELECT $%d)", sql, arg, arg+1)
+	args = append(args, query.UserId, query.UserId)
+	arg += 2
+
+	if query.Search != "" {
+		sql = fmt.Sprintf("%s, AND post_in_html LIKE '%%%s%%'", sql, query.Search)
+	}
+
+	if len(query.SearchTags) > 0 {
+		sql = fmt.Sprintf("%s AND $%v <@ tags", sql, arg)
+		args = append(args, pq.Array(query.SearchTags))
+		arg++
+	}
+
+	row := conn.QueryRow(ctx, sql, args...)
+	var count int
+	err = row.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
