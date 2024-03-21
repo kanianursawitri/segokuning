@@ -125,3 +125,68 @@ func (u *User) GetUserById(ctx context.Context, userID string) (entity.User, err
 
 	return result, nil
 }
+
+func (u *User) UpdateEmail(ctx context.Context, userID string, email string) (entity.User, error) {
+	conn, err := u.dbPool.Acquire(ctx)
+	if err != nil {
+		return entity.User{}, err
+	}
+	defer conn.Release()
+
+	var result entity.User
+
+	// Check if the email already exists
+	var existingEmail *string
+	err = conn.QueryRow(ctx, `SELECT email FROM users WHERE email = $1`, email).Scan(&existingEmail)
+	if existingEmail != nil {
+		return result, errors.New("EMAIL_EXISTS")
+	}
+	// Check if the user already has an email
+	err = conn.QueryRow(ctx, `SELECT email FROM users WHERE id = $1`, userID).Scan(&existingEmail)
+	if existingEmail != nil {
+		return result, errors.New("EMAIL_ALREADY_SET")
+	}
+
+	// If no errors, proceed to update the email
+	err = conn.QueryRow(ctx, `UPDATE users SET email = $1 WHERE id = $2 RETURNING id, name, phone, email`, email, userID).Scan(&result.Id, &result.Name, &result.CredentialType, &result.CredentialValue)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return result, errors.New("USER_NOT_FOUND")
+	}
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+func (u *User) UpdatePhone(ctx context.Context, userID string, phone string) (entity.User, error) {
+	conn, err := u.dbPool.Acquire(ctx)
+	if err != nil {
+		return entity.User{}, err
+	}
+	defer conn.Release()
+
+	var result entity.User
+
+	// Check if the phone already exists
+	var existingPhone string
+	err = conn.QueryRow(ctx, `SELECT phone FROM users WHERE phone = $1`, phone).Scan(&existingPhone)
+	if err == nil {
+		return result, errors.New("PHONE_EXISTS") // Returning 409 error
+	}
+
+	// Check if the user already has a phone
+	err = conn.QueryRow(ctx, `SELECT phone FROM users WHERE id = $1`, userID).Scan(&existingPhone)
+	if err == nil {
+		return result, errors.New("PHONE_ALREADY_SET") // Returning 400 error
+	}
+
+	// If no errors, proceed to update the phone
+	err = conn.QueryRow(ctx, `UPDATE users SET phone = $1 WHERE id = $2 RETURNING id, name, phone, email`, phone, userID).Scan(&result.Id, &result.Name, &result.CredentialType, &result.CredentialValue)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return result, errors.New("USER_NOT_FOUND")
+	}
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
