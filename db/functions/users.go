@@ -190,3 +190,22 @@ func (u *User) UpdatePhone(ctx context.Context, userID string, phone string) (en
 	}
 	return result, nil
 }
+
+func (u *User) UpdateAccount(ctx context.Context, userID, name, imageURL string) (entity.User, error) {
+	conn, err := u.dbPool.Acquire(ctx)
+	if err != nil {
+		return entity.User{}, err
+	}
+	defer conn.Release()
+
+	var result entity.User
+
+	err = conn.QueryRow(ctx, `UPDATE users SET name = $1, image_url = $2 WHERE id = $3 RETURNING id, phone, email`, name, imageURL, userID).Scan(&result.Id, &result.Phone, &result.Email)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return result, errors.New("USER_NOT_FOUND")
+	}
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}

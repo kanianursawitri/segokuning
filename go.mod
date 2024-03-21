@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.51.4
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gabriel-vasile/mimetype v1.4.3
+	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gofiber/fiber/v2 v2.52.2
 	github.com/gofiber/jwt/v2 v2.2.7

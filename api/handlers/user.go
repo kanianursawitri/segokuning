@@ -9,6 +9,7 @@ import (
 	"shopifyx/db/functions"
 	"shopifyx/internal/utils"
 
+	"github.com/go-ozzo/ozzo-validation/is"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/gofiber/fiber/v2"
 )
@@ -44,6 +45,11 @@ type UpdateEmailRequest struct {
 
 type UpdatePhoneRequest struct {
 	Phone string `json:"phone"`
+}
+
+type UpdateAccountRequest struct {
+	Name     string `json:"name"`
+	ImageURL string `json:"imageUrl"`
 }
 
 func (a AuthRequest) Validate() error {
@@ -111,6 +117,14 @@ func (a UpdatePhoneRequest) Validate() error {
 			return nil
 		})),
 	)
+}
+
+func (a UpdateAccountRequest) Validate() error {
+	return validation.ValidateStruct(&a,
+		validation.Field(&a.Name, validation.Required, validation.Length(5, 50)),
+		validation.Field(&a.ImageURL, validation.Required, is.URL),
+	)
+
 }
 
 func isValidEmail(email string) bool {
@@ -303,6 +317,44 @@ func (u *User) UpdatePhone(ctx *fiber.Ctx) error {
 			"name":  user.Name,
 			"phone": user.Phone,
 			"email": user.Email,
+		},
+	})
+}
+
+func (u *User) UpdateAccount(ctx *fiber.Ctx) error {
+	userIDClaim := ctx.Locals("user_id").(string)
+	// Parse request body
+	var req UpdateAccountRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return responses.ErrorBadRequest(ctx, err.Error())
+	}
+
+	// Validate request body
+	if err := req.Validate(); err != nil {
+		return responses.ErrorBadRequest(ctx, err.Error())
+	}
+
+	var user entity.User
+	var err error
+
+	// Update user account
+	if user, err = u.Database.UpdateAccount(ctx.UserContext(), userIDClaim, req.Name, req.ImageURL); err != nil {
+		return responses.ErrorInternalServerError(ctx, err.Error())
+	}
+	if err != nil {
+		if err.Error() == "USER_NOT_FOUND" {
+			return responses.ErrorNotFound(ctx, err.Error())
+		}
+		return responses.ErrorInternalServerError(ctx, err.Error())
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Account updated successfully",
+		"data": fiber.Map{
+			"name":  req.Name,
+			"phone": user.Phone,
+			"email": user.Email,
+			"image": req.ImageURL,
 		},
 	})
 }
