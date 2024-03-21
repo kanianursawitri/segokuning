@@ -338,9 +338,7 @@ func (u *User) UpdateAccount(ctx *fiber.Ctx) error {
 	var err error
 
 	// Update user account
-	if user, err = u.Database.UpdateAccount(ctx.UserContext(), userIDClaim, req.Name, req.ImageURL); err != nil {
-		return responses.ErrorInternalServerError(ctx, err.Error())
-	}
+	user, err = u.Database.UpdateAccount(ctx.UserContext(), userIDClaim, req.Name, req.ImageURL)
 	if err != nil {
 		if err.Error() == "USER_NOT_FOUND" {
 			return responses.ErrorNotFound(ctx, err.Error())
