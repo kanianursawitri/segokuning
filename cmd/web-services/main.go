@@ -4,11 +4,11 @@ import (
 	"context"
 	"log"
 
-	"shopifyx/api/handlers"
-	"shopifyx/api/responses"
-	"shopifyx/api/routes"
-	"shopifyx/configs"
-	"shopifyx/db/connections"
+	"segokuning/api/handlers"
+	"segokuning/api/responses"
+	"segokuning/api/routes"
+	"segokuning/configs"
+	"segokuning/db/connections"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

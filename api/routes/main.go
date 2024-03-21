@@ -1,8 +1,9 @@
 package routes
 
 import (
-	"shopifyx/api/handlers"
-	"shopifyx/db/functions"
+	"segokuning/api/handlers"
+	"segokuning/db/functions"
+	"segokuning/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -25,6 +26,11 @@ func RouteRegister(app *fiber.App, deps handlers.Dependencies) {
 		FriendDatabase: functions.NewFriend(deps.DbPool, deps.Cfg),
 	}
 
+	imageUploaderHandler := handlers.ImageUploader{
+		Uploader: utils.NewImageUploader(deps.Cfg),
+	}
+
+	ImageRoutes(app, imageUploaderHandler)
 	UserRoutes(app, userHandler)
 	PostRoutes(app, postHandler)
 	CommentRoutes(app, commentHandler)

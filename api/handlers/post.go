@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"shopifyx/api/responses"
-	"shopifyx/db/entity"
-	"shopifyx/db/functions"
+	"segokuning/api/responses"
+	"segokuning/db/entity"
+	"segokuning/db/functions"
 	"strconv"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"shopifyx/configs"
+	"segokuning/configs"
 
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v2"

@@ -3,8 +3,8 @@ package functions
 import (
 	"context"
 	"errors"
-	"shopifyx/configs"
-	"shopifyx/db/entity"
+	"segokuning/configs"
+	"segokuning/db/entity"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

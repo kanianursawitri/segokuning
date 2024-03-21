@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"shopifyx/configs"
+	"segokuning/configs"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"

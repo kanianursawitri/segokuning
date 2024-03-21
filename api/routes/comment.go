@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"shopifyx/api/handlers"
-	"shopifyx/api/middleware"
+	"segokuning/api/handlers"
+	"segokuning/api/middleware"
 
 	"github.com/gofiber/fiber/v2"
 )

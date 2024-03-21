@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"log"
-	"shopifyx/configs"
-	"shopifyx/db/connections"
-	"shopifyx/db/entity"
+	"segokuning/configs"
+	"segokuning/db/connections"
+	"segokuning/db/entity"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
