@@ -245,10 +245,6 @@ func (u *User) UpdateEmail(ctx *fiber.Ctx) error {
 
 	// Update user email
 	if user, err = u.Database.UpdateEmail(ctx.UserContext(), userIDClaim, req.Email); err != nil {
-		return responses.ErrorInternalServerError(ctx, err.Error())
-	}
-
-	if err != nil {
 		if err.Error() == "EMAIL_EXISTS" {
 			return responses.ErrorConflict(ctx, err.Error())
 		}
@@ -289,9 +285,6 @@ func (u *User) UpdatePhone(ctx *fiber.Ctx) error {
 
 	// Update user phone
 	if user, err = u.Database.UpdatePhone(ctx.UserContext(), userIDClaim, req.Phone); err != nil {
-		return responses.ErrorInternalServerError(ctx, err.Error())
-	}
-	if err != nil {
 		if err.Error() == "PHONE_EXISTS" {
 			return responses.ErrorConflict(ctx, err.Error())
 		}
