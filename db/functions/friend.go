@@ -227,7 +227,7 @@ func (f *Friend) DeleteFriend(ctx context.Context, userID, friendID int) error {
 	}
 
 	// Update friends_counter
-	sql = `UPDATE friends_counter SET friend_count=(SELECT COUNT (friend_id) FROM friends AS f WHERE f.user_id=fc.user_id AND user_id IN ($1,$2)) WHERE user_id IN ($1,$2)`
+	sql = `UPDATE friends_counter AS fc SET friend_count=(SELECT COUNT (friend_id) FROM friends AS f WHERE f.user_id=fc.user_id AND user_id IN ($1,$2)) WHERE user_id IN ($1,$2)`
 	_, err = tx.Exec(ctx, sql, userID, friendID)
 	if err != nil {
 		return err
