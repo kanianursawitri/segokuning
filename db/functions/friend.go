@@ -124,14 +124,49 @@ func (f *Friend) Get(ctx context.Context, q entity.QueryGetFriends) (entity.Frie
 		friends = append(friends, friend)
 	}
 
+	total, err := f.GetTotal(ctx, q.UserID, q.OnlyFriends, q.Search)
+
 	return entity.FriendData{
 		Meta: entity.Meta{
-			Total:  2000,
+			Total:  total,
 			Limit:  q.Limit,
 			Offset: q.Offset,
 		},
 		Data: friends,
 	}, nil
+}
+
+func (f *Friend) GetTotal(ctx context.Context, userID int, onlyFriend bool, search string) (int, error) {
+	conn, err := f.DBPool.Acquire(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Release()
+
+	var (
+		sql = `SELECT count(fs.id) FROM friends fs 
+                      LEFT JOIN users u ON fs.friend_id = u.id 
+                      WHERE 1 = 1`
+		total int
+		args  []interface{}
+	)
+
+	if onlyFriend {
+		sql += fmt.Sprintf(" AND fs.user_id = $%d", len(args)+1)
+		args = append(args, userID)
+	}
+
+	if search != "" {
+		sql += fmt.Sprintf(" AND (u.name ILIKE '%' || $%d || '%' OR u.image_url ILIKE '%' || $%d || '%')", len(args)+1)
+		args = append(args, search)
+	}
+
+	err = conn.QueryRow(ctx, sql, userID).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }
 
 func (f *Friend) AddFriend(ctx context.Context, userID, friendID int) error {
