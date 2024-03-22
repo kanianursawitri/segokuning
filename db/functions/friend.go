@@ -108,7 +108,6 @@ func (f *Friend) Get(ctx context.Context, q entity.QueryGetFriends) (entity.Frie
 	}
 
 	rows, err := conn.Query(ctx, sql, args...)
-	fmt.Println(sql, args)
 	if err != nil {
 		return entity.FriendData{}, err
 	}
@@ -125,6 +124,9 @@ func (f *Friend) Get(ctx context.Context, q entity.QueryGetFriends) (entity.Frie
 	}
 
 	total, err := f.GetTotal(ctx, q.UserID, q.OnlyFriends, q.Search)
+	if err != nil {
+		return entity.FriendData{}, err
+	}
 
 	return entity.FriendData{
 		Meta: entity.Meta{
@@ -161,7 +163,7 @@ func (f *Friend) GetTotal(ctx context.Context, userID int, onlyFriend bool, sear
 		args = append(args, search)
 	}
 
-	err = conn.QueryRow(ctx, sql, userID).Scan(&total)
+	err = conn.QueryRow(ctx, sql, args...).Scan(&total)
 	if err != nil {
 		return 0, err
 	}
