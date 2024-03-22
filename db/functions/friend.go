@@ -30,7 +30,7 @@ func (f *Friend) IsFriend(ctx context.Context, userID, friendID int) (bool, erro
 	}
 	defer conn.Release()
 
-	sql := `SELECT id FROM friends WHERE user_id = $1 AND friend_id = $2`
+	sql := `SELECT id FROM friends WHERE (user_id = $1 AND friend_id = $2) or (user_id = $2 AND friend_id = $1)`
 	row := conn.QueryRow(ctx, sql, userID, friendID)
 	var friend entity.Friend
 	err = row.Scan(&friend.ID)
@@ -116,7 +116,7 @@ func (f *Friend) Get(ctx context.Context, q entity.QueryGetFriends) (entity.Frie
 	friends := make([]entity.Friend, 0)
 	for rows.Next() {
 		var friend entity.Friend
-		err := rows.Scan(&friend.ID, &friend.UserID, &friend.Name, &friend.ImageUrl, &friend.CreatedAt)
+		err := rows.Scan(&friend.FriendID, &friend.UserID, &friend.Name, &friend.ImageUrl, &friend.CreatedAt)
 		if err != nil {
 			return entity.FriendData{}, err
 		}
@@ -207,7 +207,7 @@ func (f *Friend) AddFriend(ctx context.Context, userID, friendID int) error {
 	}
 	defer tx.Rollback(ctx)
 
-	sql := `INSERT INTO friends (user_id, friend_id) VALUES ($1, $2)`
+	sql := `INSERT INTO friends (user_id, friend_id) VALUES ($1, $2),($2, $1)`
 	_, err = tx.Exec(ctx, sql, userID, friendID)
 	if err != nil {
 		return err
@@ -257,7 +257,7 @@ func (f *Friend) DeleteFriend(ctx context.Context, userID, friendID int) error {
 	}
 	defer tx.Rollback(ctx)
 
-	sql := `DELETE FROM friends WHERE user_id = $1 AND friend_id = $2`
+	sql := `DELETE FROM friends WHERE (user_id = $1 AND friend_id = $2) or (user_id = $2 AND friend_id = $1)`
 	_, err = tx.Exec(ctx, sql, userID, friendID)
 	if err != nil {
 		return err
