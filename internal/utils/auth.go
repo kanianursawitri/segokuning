@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"shopifyx/configs"
+	"segokuning/configs"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"

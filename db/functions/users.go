@@ -3,8 +3,8 @@ package functions
 import (
 	"context"
 	"errors"
-	"shopifyx/configs"
-	"shopifyx/db/entity"
+	"segokuning/configs"
+	"segokuning/db/entity"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -182,6 +182,25 @@ func (u *User) UpdatePhone(ctx context.Context, userID string, phone string) (en
 
 	// If no errors, proceed to update the phone
 	err = conn.QueryRow(ctx, `UPDATE users SET phone = $1 WHERE id = $2 RETURNING id, name, phone, email`, phone, userID).Scan(&result.Id, &result.Name, &result.CredentialType, &result.CredentialValue)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return result, errors.New("USER_NOT_FOUND")
+	}
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+func (u *User) UpdateAccount(ctx context.Context, userID, name, imageURL string) (entity.User, error) {
+	conn, err := u.dbPool.Acquire(ctx)
+	if err != nil {
+		return entity.User{}, err
+	}
+	defer conn.Release()
+
+	var result entity.User
+
+	err = conn.QueryRow(ctx, `UPDATE users SET name = $1, image_url = $2 WHERE id = $3 RETURNING id, phone, email`, name, imageURL, userID).Scan(&result.Id, &result.Phone, &result.Email)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return result, errors.New("USER_NOT_FOUND")
 	}

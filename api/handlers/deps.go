@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"shopifyx/configs"
+	"segokuning/configs"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

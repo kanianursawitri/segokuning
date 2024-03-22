@@ -2,6 +2,6 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'shopifyx'
+  - job_name: 'segokuning'
     static_configs:
-      - targets: ['shopifyx:8080']
+      - targets: ['segokuning:8080']

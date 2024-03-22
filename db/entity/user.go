@@ -8,4 +8,5 @@ type User struct {
 	CredentialValue string  `json:"credentialValue"`
 	Phone           *string `json:"phone"`
 	Email           *string `json:"email"`
+	ImageUrl        *string `json:"imageUrl"`
 }

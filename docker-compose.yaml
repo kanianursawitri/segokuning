@@ -11,7 +11,7 @@ services:
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     networks:
-      - shopifyx-net
+      - segokuning-net
 
   prometheus:
     container_name: prometheus
@@ -23,7 +23,7 @@ services:
     environment:
       - PROMETHEUS_ADDRESS=${PROMETHEUS_ADDRESS}
     networks:
-      - shopifyx-net
+      - segokuning-net
 
   grafana:
     container_name: grafana
@@ -33,13 +33,13 @@ services:
     volumes:
       - grafana-storage:/var/lib/grafana
     networks:
-      - shopifyx-net
+      - segokuning-net
 
-  shopifyx_server:
+  segokuning_server:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: shopifyx_server
+    container_name: segokuning_server
     ports:
       - "8000:8000"
     environment:
@@ -54,10 +54,10 @@ services:
       - S3_BASE_URL=${S3_BASE_URL}
       # Add other environment variables as needed
     networks:
-      - shopifyx-net
+      - segokuning-net
 
 volumes:
   grafana-storage:
 
 networks:
-  shopifyx-net:
+  segokuning-net:

@@ -4,11 +4,11 @@ CREATE TABLE IF NOT EXISTS users(
     phone VARCHAR NULL DEFAULT null,
     "name" VARCHAR NOT NULL UNIQUE,
     "password" VARCHAR NOT NULL UNIQUE,
+    image_url VARCHAR NULL DEFAULT null,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create indexes
-CREATE INDEX id ON users (id);
 CREATE INDEX phone ON users (phone);
 CREATE INDEX email ON users (email);
