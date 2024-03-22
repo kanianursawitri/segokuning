@@ -30,8 +30,13 @@ func RouteRegister(app *fiber.App, deps handlers.Dependencies) {
 		Uploader: utils.NewImageUploader(deps.Cfg),
 	}
 
+	friendHandler := handlers.Friend{
+		Database: functions.NewFriend(deps.DbPool, deps.Cfg),
+	}
+
 	ImageRoutes(app, imageUploaderHandler)
 	UserRoutes(app, userHandler)
 	PostRoutes(app, postHandler)
 	CommentRoutes(app, commentHandler)
+	FriendRoutes(app, friendHandler)
 }
