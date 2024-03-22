@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"strconv"
+	"time"
 
 	"segokuning/api/responses"
 	"segokuning/db/entity"
@@ -21,13 +22,26 @@ type (
 		FriendID string `json:"userId"`
 	}
 
+	FriendData struct {
+		UserID    int       `json:"userId"`
+		FriendID  int       `json:"friendId"`
+		Name      string    `json:"name"`
+		ImageUrl  *string   `json:"imageUrl"`
+		CreatedAt time.Time `json:"createdAt"`
+	}
+
+	FriendResponse struct {
+		Data []FriendData `json:"data"`
+		Meta entity.Meta  `json:"meta"`
+	}
+
 	QueryGetFriends struct {
 		UserID      int    `query:"userId"`
 		Limit       int    `query:"limit"`
 		Offset      int    `query:"offset"`
 		SortBy      string `query:"sortBy"`
 		OrderBy     string `query:"orderBy"`
-		OnlyFriends bool   `query:"onlyFriends"`
+		OnlyFriends bool   `query:"onlyFriend"`
 		Search      string `query:"search"`
 	}
 )
@@ -49,11 +63,23 @@ func (qgf QueryGetFriends) Validate() error {
 	)
 }
 
+func (f *Friend) mapping(friend entity.Friend) FriendData {
+	return FriendData{
+		UserID:    friend.UserID,
+		FriendID:  friend.FriendID,
+		Name:      friend.Name,
+		ImageUrl:  friend.ImageUrl,
+		CreatedAt: friend.CreatedAt,
+	}
+}
+
 func (f *Friend) GetFriends(ctx *fiber.Ctx) error {
 	var (
-		err         error
-		friendsData entity.FriendData
-		userID      int
+		err            error
+		friendsData    []FriendData
+		friendsResult  entity.FriendData
+		friendResponse FriendResponse
+		userID         int
 	)
 
 	// Get user ID from context
@@ -89,7 +115,7 @@ func (f *Friend) GetFriends(ctx *fiber.Ctx) error {
 	}
 
 	// Call the Get method to fetch friends data
-	friendsData, err = f.Database.Get(ctx.Context(), entity.QueryGetFriends{
+	friendsResult, err = f.Database.Get(ctx.Context(), entity.QueryGetFriends{
 		UserID:      userID,
 		Limit:       queryParams.Limit,
 		Offset:      queryParams.Offset,
@@ -102,8 +128,16 @@ func (f *Friend) GetFriends(ctx *fiber.Ctx) error {
 		return err
 	}
 
+	// Map the data to FriendData
+	friendsData = make([]FriendData, len(friendsResult.Data))
+	for i, friend := range friendsResult.Data {
+		friendsData[i] = f.mapping(friend)
+	}
+
+	friendResponse.Meta = friendsResult.Meta
+
 	// Send the response
-	return responses.SuccessMeta(ctx, friendsData.Data, friendsData.Meta)
+	return responses.SuccessMeta(ctx, friendsData, friendResponse.Meta)
 }
 
 // AddFriend is a handler to add a friend

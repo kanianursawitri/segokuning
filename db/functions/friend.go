@@ -3,6 +3,7 @@ package functions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"segokuning/configs"
 	"segokuning/db/entity"
 
@@ -71,22 +72,19 @@ func (f *Friend) Get(ctx context.Context, q entity.QueryGetFriends) (entity.Frie
 	defer conn.Release()
 
 	var (
-		selectSql = `SELECT fs.friend_id AS id, fs.user_id AS userId, u.name, u.image_url, u.created_at `
-		totalSql  = `SELECT COUNT(fs.friend_id) AS total `
-		sql       = `FROM friends fs 
+		sql = `SELECT fs.friend_id AS id, fs.user_id AS userId, u.name, u.image_url, u.created_at FROM friends fs 
                       LEFT JOIN users u ON fs.friend_id = u.id 
                       WHERE 1 = 1`
-		total int
-		args  []interface{}
+		args []interface{}
 	)
 
 	if q.OnlyFriends {
-		sql += " AND fs.user_id = $1"
+		sql += fmt.Sprintf(" AND fs.user_id = $%d", len(args)+1)
 		args = append(args, q.UserID)
 	}
 
 	if q.Search != "" {
-		sql += " AND (u.name ILIKE '%' || $3 || '%' OR u.image_url ILIKE '%' || $3 || '%')"
+		sql += fmt.Sprintf(" AND (u.name ILIKE '%' || $%d || '%' OR u.image_url ILIKE '%' || $%d || '%')", len(args)+1)
 		args = append(args, q.Search)
 	}
 
@@ -96,27 +94,21 @@ func (f *Friend) Get(ctx context.Context, q entity.QueryGetFriends) (entity.Frie
 	}
 
 	if q.Limit != 0 {
-		sql += " LIMIT $4"
+		sql += fmt.Sprintf(` LIMIT $%d`, len(args)+1)
 		args = append(args, q.Limit)
 	} else {
 		sql += " LIMIT 5"
-		args = append(args, q.Limit, q.Offset)
 	}
 
 	if q.Offset != 0 {
-		sql += " OFFSET $5"
+		sql += fmt.Sprintf(` OFFSET $%d`, len(args)+1)
 		args = append(args, q.Offset)
 	} else {
 		sql += " OFFSET 0"
-		args = append(args, q.Offset)
 	}
 
-	err = conn.QueryRow(ctx, totalSql+sql, args...).Scan(&total)
-	if err != nil {
-		return entity.FriendData{}, err
-	}
-
-	rows, err := conn.Query(ctx, selectSql+sql, args...)
+	rows, err := conn.Query(ctx, sql, args...)
+	fmt.Println(sql, args)
 	if err != nil {
 		return entity.FriendData{}, err
 	}
@@ -134,7 +126,7 @@ func (f *Friend) Get(ctx context.Context, q entity.QueryGetFriends) (entity.Frie
 
 	return entity.FriendData{
 		Meta: entity.Meta{
-			Total:  total,
+			Total:  2000,
 			Limit:  q.Limit,
 			Offset: q.Offset,
 		},
