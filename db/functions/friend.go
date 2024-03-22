@@ -63,19 +63,21 @@ func (f *Friend) GetByID(ctx context.Context, friendID int) (entity.Friend, erro
 	return friend, nil
 }
 
-func (f *Friend) Get(ctx context.Context, q entity.QueryGetFriends) ([]entity.Friend, error) {
+func (f *Friend) Get(ctx context.Context, q entity.QueryGetFriends) (entity.FriendData, error) {
 	conn, err := f.DBPool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return entity.FriendData{}, err
 	}
 	defer conn.Release()
 
 	var (
-		sql = `SELECT fs.friend_id AS id, fs.user_id AS userId, u.name, u.image_url, u.created_at 
-                      FROM friends fs 
+		selectSql = `SELECT fs.friend_id AS id, fs.user_id AS userId, u.name, u.image_url, u.created_at `
+		totalSql  = `SELECT COUNT(fs.friend_id) AS total `
+		sql       = `FROM friends fs 
                       LEFT JOIN users u ON fs.friend_id = u.id 
                       WHERE 1 = 1`
-		args []interface{}
+		total int
+		args  []interface{}
 	)
 
 	if q.OnlyFriends {
@@ -109,9 +111,14 @@ func (f *Friend) Get(ctx context.Context, q entity.QueryGetFriends) ([]entity.Fr
 		args = append(args, q.Offset)
 	}
 
-	rows, err := conn.Query(ctx, sql, args...)
+	err = conn.QueryRow(ctx, totalSql+sql, args...).Scan(&total)
 	if err != nil {
-		return nil, err
+		return entity.FriendData{}, err
+	}
+
+	rows, err := conn.Query(ctx, selectSql+sql, args...)
+	if err != nil {
+		return entity.FriendData{}, err
 	}
 	defer rows.Close()
 
@@ -120,12 +127,19 @@ func (f *Friend) Get(ctx context.Context, q entity.QueryGetFriends) ([]entity.Fr
 		var friend entity.Friend
 		err := rows.Scan(&friend.ID, &friend.UserID, &friend.Name, &friend.ImageUrl, &friend.CreatedAt)
 		if err != nil {
-			return nil, err
+			return entity.FriendData{}, err
 		}
 		friends = append(friends, friend)
 	}
 
-	return friends, nil
+	return entity.FriendData{
+		Meta: entity.Meta{
+			Total:  total,
+			Limit:  q.Limit,
+			Offset: q.Offset,
+		},
+		Data: friends,
+	}, nil
 }
 
 func (f *Friend) AddFriend(ctx context.Context, userID, friendID int) error {

@@ -21,4 +21,9 @@ type (
 		OnlyFriends bool   `query:"onlyFriends"`
 		Search      string `query:"search"`
 	}
+
+	FriendData struct {
+		Data []Friend `json:"data"`
+		Meta Meta     `json:"meta"`
+	}
 )
