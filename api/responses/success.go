@@ -1,6 +1,10 @@
 package responses
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"segokuning/db/entity"
+
+	"github.com/gofiber/fiber/v2"
+)
 
 type TheResponse struct {
 	StatusCode  int         `json:"code"`
@@ -46,5 +50,13 @@ func Success(c *fiber.Ctx, m interface{}) error {
 	return c.Status(200).JSON(map[string]interface{}{
 		"status": "Success",
 		"data":   m,
+	})
+}
+
+func SuccessMeta(c *fiber.Ctx, m interface{}, meta entity.Meta) error {
+	return c.Status(200).JSON(map[string]interface{}{
+		"status": "Success",
+		"data":   m,
+		"meta":   meta,
 	})
 }

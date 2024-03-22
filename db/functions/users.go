@@ -3,6 +3,7 @@ package functions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"segokuning/configs"
 	"segokuning/db/entity"
 
@@ -39,38 +40,44 @@ func (u *User) Register(ctx context.Context, usr entity.User) (entity.User, erro
 	var existingId string
 	var sql string
 
-	if usr.CredentialType == "email" {
-		sql = `SELECT id FROM users WHERE email = $1`
-	} else {
-		sql = `SELECT id FROM users WHERE phone = $1`
-	}
+	sql = fmt.Sprintf(`SELECT id FROM users WHERE %s = $1`, usr.CredentialType)
 
 	err = conn.QueryRow(ctx, sql, usr.CredentialValue).Scan(&existingId)
 	if existingId != "" {
 		return entity.User{}, errors.New("EXISTING_USERNAME")
 	}
 
-	if usr.CredentialType == "email" {
-		sql = `INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, phone, email`
-	} else {
-		sql = `INSERT INTO users (name, phone, password) VALUES ($1, $2, $3) RETURNING id, name, phone, email`
-	}
-
-	_, err = conn.Exec(ctx, sql, usr.Name, usr.CredentialValue, string(hashedPassword))
-	var result entity.User
-
-	if usr.CredentialType == "email" {
-		sql = `SELECT id, name, phone, email FROM users WHERE email = $1`
-	} else {
-		sql = `SELECT id, name, phone, email FROM users WHERE phone = $1`
-	}
-	err = conn.QueryRow(ctx, sql, usr.CredentialValue).Scan(&result.Id, &result.Name, &result.Phone, &result.Email)
-
+	tx, err := conn.Begin(ctx)
 	if err != nil {
+		// Handle error
+		return entity.User{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	sql = fmt.Sprintf(`INSERT INTO users (name, %s, password) VALUES ($1, $2, $3) RETURNING id, name, phone, email`, usr.CredentialType)
+
+	err = tx.QueryRow(ctx, sql, usr.Name, usr.CredentialValue, string(hashedPassword)).Scan(&usr.Id, &usr.Name, &usr.Phone, &usr.Email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.User{}, errors.New("USER_NOT_FOUND")
+		}
+		return entity.User{}, err
+	}
+	// Insert into friends_counter with friend_count = 0
+	_, err = tx.Exec(ctx, `INSERT INTO friends_counter (user_id, friend_count) VALUES ($1, $2)`, usr.Id, 0)
+	if err != nil {
+		// Handle error
 		return entity.User{}, err
 	}
 
-	return result, nil
+	// Commit the transaction
+	err = tx.Commit(ctx)
+	if err != nil {
+		// Handle error
+		return entity.User{}, err
+	}
+
+	return usr, nil
 }
 
 func (u *User) Login(ctx context.Context, usr entity.User) (entity.User, error) {
@@ -82,12 +89,8 @@ func (u *User) Login(ctx context.Context, usr entity.User) (entity.User, error) 
 
 	var result entity.User
 	var sql string
-	if usr.CredentialType == "email" {
-		sql = `SELECT id, name, phone, email name, password FROM users WHERE email = $1`
-	} else {
-		sql = `SELECT id, name, phone, email name, password FROM users WHERE phone = $1`
-	}
 
+	sql = fmt.Sprintf(`SELECT id, name, phone, email name, password FROM users WHERE %s = $1`, usr.CredentialType)
 	err = conn.QueryRow(ctx, sql, usr.CredentialValue).Scan(
 		&result.Id, &result.Name, &result.Phone, &result.Email, &result.Password,
 	)
