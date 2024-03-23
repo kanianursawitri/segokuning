@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"segokuning/api/responses"
 	"segokuning/internal/utils"
 
 	"github.com/gabriel-vasile/mimetype"
@@ -18,9 +19,7 @@ type ImageUploader struct {
 func (i *ImageUploader) Upload(c *fiber.Ctx) error {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		return c.
-			Status(http.StatusInternalServerError).
-			JSON("failed get image")
+		return responses.ErrorBadRequest(c, "failed get file from form")
 	}
 
 	// check if file size is greater between 10kb and 2mb
@@ -59,7 +58,10 @@ func (i *ImageUploader) Upload(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(err.Error())
 	}
 
-	return c.Status(http.StatusOK).JSON(map[string]string{
-		"imageUrl": path,
+	return c.Status(http.StatusOK).JSON(map[string]interface{}{
+		"message": "File uploaded sucessfully",
+		"data": map[string]interface{}{
+			"imageUrl": path,
+		},
 	})
 }
