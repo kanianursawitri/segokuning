@@ -34,10 +34,10 @@ type (
 	}
 
 	Creator struct {
-		UserId      string `json:"userId"`
-		Name        string `json:"name"`
-		ImageUrl    string `json:"imageUrl"`
-		FriendCount int    `json:"friendCount"`
+		UserId      string  `json:"userId"`
+		Name        string  `json:"name"`
+		ImageUrl    *string `json:"imageUrl"`
+		FriendCount int     `json:"friendCount"`
 	}
 
 	CreatorPost struct {
@@ -98,14 +98,14 @@ func (qgp QueryGetPosts) ToEntity(userID int) entity.QueryGetPosts {
 	}
 }
 
-func convertEntityPostsToResponse(posts []entity.Post) []ElemData {
+func (p *Post) convertEntityPostsToResponse(posts []entity.Post) []ElemData {
 	var elemData []ElemData
 	for _, post := range posts {
 		var comments []CommentPerPost
 		for _, comment := range post.Comments {
 			comments = append(comments, CommentPerPost{
 				Comment:   comment.Comment,
-				Creator:   Creator{UserId: strconv.Itoa(comment.Creator.UserId)},
+				Creator:   Creator{UserId: strconv.Itoa(comment.Creator.UserId), Name: comment.Creator.Name, ImageUrl: comment.Creator.ImageUrl, FriendCount: comment.Creator.FriendCount},
 				CreatedAt: comment.CreatedAt.String(),
 			})
 		}
@@ -120,7 +120,10 @@ func convertEntityPostsToResponse(posts []entity.Post) []ElemData {
 			Comments: comments,
 			Creator: CreatorPost{
 				Creator: Creator{
-					UserId: strconv.Itoa(post.UserID),
+					UserId:      strconv.Itoa(post.Creator.UserId),
+					Name:        post.Creator.Name,
+					ImageUrl:    post.Creator.ImageUrl,
+					FriendCount: post.Creator.FriendCount,
 				},
 				CreatedAt: post.CreatedAt.String(),
 			},
@@ -204,7 +207,7 @@ func (p *Post) GetPosts(ctx *fiber.Ctx) error {
 
 	response := GetPostsResponse{
 		Message: "Success",
-		Data:    convertEntityPostsToResponse(posts),
+		Data:    p.convertEntityPostsToResponse(posts),
 		Meta: Meta{
 			Limit:  req.Limit,
 			Offset: req.Offset,

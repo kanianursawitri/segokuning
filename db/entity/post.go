@@ -4,11 +4,11 @@ import "time"
 
 type (
 	Creator struct {
-		UserId      int    `json:"userId"`
-		Name        string `json:"name"`
-		ImageUrl    string `json:"imageUrl"`
-		FriendCount int    `json:"friendCount"`
-		CreatedAt   string `json:"createdAt"`
+		UserId      int     `json:"userId"`
+		Name        string  `json:"name"`
+		ImageUrl    *string `json:"imageUrl"`
+		FriendCount int     `json:"friendCount"`
+		CreatedAt   string  `json:"createdAt"`
 	}
 
 	CommentPerPost struct {
@@ -24,6 +24,7 @@ type (
 		UserID     int              `json:"userId"`
 		CreatedAt  time.Time        `json:"createdAt"`
 		Comments   []CommentPerPost `json:"comments"`
+		Creator    Creator          `json:"creator"`
 	}
 
 	QueryGetPosts struct {

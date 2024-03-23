@@ -25,6 +25,28 @@ func NewPost(dbPool *pgxpool.Pool, config configs.Config) *Post {
 	}
 }
 
+func (f *Post) GetCreator(ctx context.Context, userId int) (entity.Creator, error) {
+	conn, err := f.dbPool.Acquire(ctx)
+	if err != nil {
+		return entity.Creator{}, err
+	}
+	defer conn.Release()
+	var creator entity.Creator
+
+	query := `SELECT u.id AS userId, u.name, u.image_url, fc.friend_count
+						  FROM users u
+						  LEFT JOIN friends_counter fc ON fc.user_id = u.id
+						  WHERE u.id = $1`
+
+	rows := conn.QueryRow(ctx, query, userId)
+	err = rows.Scan(&creator.UserId, &creator.Name, &creator.ImageUrl, &creator.FriendCount)
+	if err != nil {
+		return entity.Creator{}, err
+	}
+
+	return creator, nil
+}
+
 func (p *Post) Add(ctx context.Context, post entity.Post) (entity.Post, error) {
 	conn, err := p.dbPool.Acquire(ctx)
 	if err != nil {
@@ -48,13 +70,18 @@ func (p *Post) AddComment(ctx context.Context, postID int, comment entity.Commen
 	}
 	defer conn.Release()
 
+	creator, err := p.GetCreator(ctx, comment.Creator.UserId)
+	if err != nil {
+		return entity.CommentPerPost{}, err
+	}
+	comment.Creator = creator
+
 	commentJSON, err := json.Marshal(comment)
 	if err != nil {
 		return entity.CommentPerPost{}, err
 	}
 
 	sql := `UPDATE posts SET comments = comments || $1 WHERE id = $2 RETURNING created_at`
-	fmt.Println(sql, commentJSON, postID)
 	err = conn.QueryRow(ctx, sql, commentJSON, postID).Scan(&comment.CreatedAt)
 	if err != nil {
 		return entity.CommentPerPost{}, err
@@ -141,6 +168,11 @@ func (p *Post) Get(ctx context.Context, query entity.QueryGetPosts) ([]entity.Po
 			post.Comments[i], post.Comments[j] = post.Comments[j], post.Comments[i]
 		}
 
+		creator, err := p.GetCreator(ctx, post.UserID)
+		if err != nil {
+			return nil, err
+		}
+		post.Creator = creator
 		posts = append(posts, post)
 	}
 
